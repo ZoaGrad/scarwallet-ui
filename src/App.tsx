@@ -1,163 +1,46 @@
-import { useState, useEffect } from 'react';
-import { useAccount, useConnect, useDisconnect, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { injected } from 'wagmi/connectors';
-import { formatEther, parseEther } from 'viem';
-import { scarCoinAddress, scarCoinAbi, oracleAddress, oracleAbi } from './contracts';
+import { useAccount, useConnect, useReadContract, useWriteContract, useBalance } from "wagmi";
+import { SCARCOIN_ADDRESS, ORACLE_ADDRESS, SCARCOIN_ABI, ORACLE_ABI, MINT_THRESHOLD, AMOY_EXPLORER } from "./contracts";
 
-function App() {
-  const account = useAccount();
-  const { connect } = useConnect();
-  const { disconnect } = useDisconnect();
-  const { writeContractAsync, data: hash } = useWriteContract();
+export default function App() {
+  const { connect, connectors } = useConnect();
+  const { address } = useAccount();
+  const { data: idxRaw } = useReadContract({ address: ORACLE_ADDRESS, abi: ORACLE_ABI, functionName: "getIndex" });
+  const { data: bal } = useBalance({ address, token: SCARCOIN_ADDRESS, query: { enabled: !!address }});
+  const { writeContractAsync, isPending } = useWriteContract();
 
-  const [toast, setToast] = useState<{ message: string; type: 'info' | 'success' | 'error' } | null>(null);
+  const index = typeof idxRaw === "bigint" ? idxRaw : 0n;
+  const indexFloat = Number(index) / 1_000_000;
 
-  const { data: scarIndex, isLoading: isIndexLoading } = useReadContract({
-    address: oracleAddress,
-    abi: oracleAbi,
-    functionName: 'getIndex',
-  });
+  const canMint = index >= MINT_THRESHOLD && !!address;
 
-  const { data: scarBalance, refetch: refetchScarBalance } = useReadContract({
-    address: scarCoinAddress,
-    abi: scarCoinAbi,
-    functionName: 'balanceOf',
-    args: [account.address!],
-    query: {
-      enabled: !!account.address,
-    },
-  });
-
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
-    hash,
-  });
-
-  useEffect(() => {
-    if (isConfirming) {
-      setToast({ message: 'Transaction pending...', type: 'info' });
-    } else if (isConfirmed) {
-      setToast({ message: 'Transaction successful!', type: 'success' });
-      refetchScarBalance();
-      const timer = setTimeout(() => setToast(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [isConfirming, isConfirmed, refetchScarBalance]);
-
-  const handleMint = async () => {
-    if (scarIndex === undefined || scarIndex < 500000n) {
-      setToast({ message: 'Minting is disabled: Index is below threshold.', type: 'error' });
-      setTimeout(() => setToast(null), 5000);
-      return;
-    }
-    try {
-      await writeContractAsync({
-        address: scarCoinAddress,
-        abi: scarCoinAbi,
-        functionName: 'publicMint',
-        args: [parseEther('10')],
-      });
-    } catch (error) {
-      console.error(error);
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-      setToast({ message: `Minting failed: ${errorMessage}`, type: 'error' });
-      setTimeout(() => setToast(null), 5000);
-    }
-  };
-
-  const handleBurn = async () => {
-    try {
-      await writeContractAsync({
-        address: scarCoinAddress,
-        abi: scarCoinAbi,
-        functionName: 'burn',
-        args: [parseEther('5')],
-      });
-    } catch (error) {
-      console.error(error);
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-      setToast({ message: `Burning failed: ${errorMessage}`, type: 'error' });
-      setTimeout(() => setToast(null), 5000);
-    }
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setToast({ message: 'Address copied!', type: 'success' });
-      setTimeout(() => setToast(null), 3000);
+  async function tx(fn: "publicMint" | "burn", amt: bigint) {
+    const hash = await writeContractAsync({
+      address: SCARCOIN_ADDRESS,
+      abi: SCARCOIN_ABI,
+      functionName: fn,
+      args: [amt]
     });
-  };
-
-  const mintDisabled = scarIndex === undefined || scarIndex < 500000n;
+    alert(`Tx sent: ${hash}\nOpening Polygonscan…`);
+    window.open(`${AMOY_EXPLORER}${hash}`, "_blank");
+  }
 
   return (
-    <div style={{ fontFamily: 'sans-serif', padding: '2rem', maxWidth: '600px', margin: '0 auto' }}>
-      <h1>ScarWallet UI</h1>
-      {toast && (
-        <div style={{
-          position: 'fixed', top: '1rem', right: '1rem', padding: '1rem',
-          backgroundColor: toast.type === 'error' ? '#f8d7da' : toast.type === 'success' ? '#d4edda' : '#cce5ff',
-          color: toast.type === 'error' ? '#721c24' : toast.type === 'success' ? '#155724' : '#004085',
-          borderRadius: '5px', zIndex: 1000,
-        }}>
-          {toast.message}
-        </div>
-      )}
+    <div style={{maxWidth: 720, margin: "40px auto", padding: 24}}>
+      <h1>ScarWallet (Amoy)</h1>
 
-      {account.status === 'connected' ? (
-        <div>
-          <p>Connected: {account.address}</p>
-          <button onClick={() => disconnect()}>Disconnect</button>
-        </div>
+      {!address ? (
+        <button onClick={() => connect({ connector: connectors[0] })}>Connect Wallet</button>
       ) : (
-        <button onClick={() => connect({ connector: injected() })}>Connect Wallet</button>
+        <div>Connected: {address}</div>
       )}
 
-      <hr style={{ margin: '2rem 0' }} />
+      <p>ScarIndex: <b>{indexFloat.toFixed(6)}</b> {index < MINT_THRESHOLD ? " (below mint threshold)" : " (mint enabled)"}</p>
+      <p>Your SCAR balance: <b>{bal ? Number(bal.value) / 1e18 : 0}</b></p>
 
-      <h2>Contract Info</h2>
-      <p>
-        ScarCoin: {scarCoinAddress}{' '}
-        <button onClick={() => copyToClipboard(scarCoinAddress)}>Copy</button>{' '}
-        <a href={`https://amoy.polygonscan.com/address/${scarCoinAddress}`} target="_blank" rel="noopener noreferrer">Scan</a>
-      </p>
-      <p>
-        Oracle: {oracleAddress}{' '}
-        <button onClick={() => copyToClipboard(oracleAddress)}>Copy</button>{' '}
-        <a href={`https://amoy.polygonscan.com/address/${oracleAddress}`} target="_blank" rel="noopener noreferrer">Scan</a>
-      </p>
-
-      <hr style={{ margin: '2rem 0' }} />
-
-      <h2>Oracle</h2>
-      {isIndexLoading ? (
-        <p>Loading ScarIndex...</p>
-      ) : scarIndex !== undefined ? (
-        <div>
-          <p>Raw ScarIndex: {scarIndex.toString()}</p>
-          <p>Float ScarIndex: {(Number(scarIndex) / 1e6).toFixed(6)}</p>
-        </div>
-      ) : (
-        <p>Could not load ScarIndex.</p>
-      )}
-
-      {account.status === 'connected' && (
-        <>
-          <hr style={{ margin: '2rem 0' }} />
-          <h2>Your Wallet</h2>
-          <p>SCAR Balance: {scarBalance !== undefined ? formatEther(scarBalance) : 'Loading...'}</p>
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-            <button onClick={handleMint} disabled={mintDisabled || isConfirming}>
-              {isConfirming ? 'Pending...' : 'Mint 10 SCAR'}
-            </button>
-            <button onClick={handleBurn} disabled={isConfirming}>
-              {isConfirming ? 'Pending...' : 'Burn 5 SCAR'}
-            </button>
-          </div>
-          {mintDisabled && <p style={{ color: 'red', marginTop: '0.5rem' }}>Minting is disabled: Index below 500,000.</p>}
-        </>
-      )}
+      <div style={{display:"flex", gap:12}}>
+        <button disabled={!canMint || isPending} onClick={()=>tx("publicMint", 10n * 10n**18n)}>Mint 10 SCAR</button>
+        <button disabled={!address || isPending} onClick={()=>tx("burn", 5n * 10n**18n)}>Burn 5 SCAR</button>
+      </div>
     </div>
   );
 }
-
-export default App;
