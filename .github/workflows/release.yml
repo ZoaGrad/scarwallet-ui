@@ -1,0 +1,24 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/release-please-action@v3
+        with:
+          release-type: node
+          package-name: scarwallet-ui
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # The logic for creating a release PR requires a PAT
+          # with repo and workflow scopes.
+          # https://github.com/google-github-actions/release-please-action#github-app-installation-vs-personal-access-token-pat
+          # We'll use the default GITHUB_TOKEN for now, which can create the release
+          # but not the PR.
+          # To enable automatic PR creation, a PAT needs to be created and stored
+          # as a secret, and the token parameter above should be changed to:
+          # token: ${{ secrets.PAT_TOKEN_NAME }}

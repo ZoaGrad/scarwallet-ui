@@ -1,0 +1,35 @@
+# Handle line endings automatically for files detected as text
+# and leave binary files untouched.
+* text=auto
+
+#
+# The above will handle all files NOT found below
+#
+# These files are text and should be normalized (Convert CRLF to LF)
+*.css             text
+*.html            text
+*.java            text
+*.js              text
+*.json            text
+*.md              text
+*.py              text
+*.scss            text
+*.sh              text
+*.sol             text
+*.sql             text
+*.xml             text
+*.yml             text
+
+# These files are binary and should be left untouched
+*.png             binary
+*.jpg             binary
+*.gif             binary
+*.ico             binary
+*.eot             binary
+*.otf             binary
+*.ttf             binary
+*.woff            binary
+*.woff2           binary
+*.pdf             binary
+*.zip             binary
+*.gz              binary
