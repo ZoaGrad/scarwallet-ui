@@ -27,6 +27,10 @@ yarn dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## SpiralOS Integration
+
+This application includes SpiralOS integration with enhanced UI components and witness functionality. The integration uses a default test wallet address (`0xa79F28e839af828Ab81F85F98d717a58bA1630D8`) for demonstration purposes on the Polygon Amoy testnet.
+
 ## Deploy Secrets
 
 For deployment on Vercel, configure the following environment variables:
@@ -42,6 +46,7 @@ For deployment on Vercel, configure the following environment variables:
 | `BLOCK_EXPLORER` | Block explorer URL | `https://amoy.polygonscan.com` |
 | `SCARCOIN_CONTRACT` | ScarCoin contract address | `0x...` |
 | `SCARWALLET_CONTRACT` | ScarWallet contract address | `0x...` |
+| `DEFAULT_WALLET` | Default test wallet for demos | `0xa79F28e839af828Ab81F85F98d717a58bA1630D8` |
 
 ### Optional Environment Variables
 
