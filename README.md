@@ -34,12 +34,12 @@ For deployment on Vercel, configure the following environment variables:
 ### Required Environment Variables
 
 | Variable | Description | Example |
-|----------|-------------|---------|
-| `CHAIN_ID` | Mumbai testnet chain ID | `80001` |
-| `RPC_URL` | Mumbai RPC endpoint | `https://rpc-mumbai.polygon.technology` |
-| `NETWORK_NAME` | Network display name | `Mumbai` |
+|----------|-------------|---------||
+| `CHAIN_ID` | Amoy testnet chain ID | `80002` |
+| `RPC_URL` | Amoy RPC endpoint | `https://rpc-amoy.polygon.technology` |
+| `NETWORK_NAME` | Network display name | `Amoy` |
 | `CURRENCY_SYMBOL` | Native currency symbol | `MATIC` |
-| `BLOCK_EXPLORER` | Block explorer URL | `https://mumbai.polygonscan.com` |
+| `BLOCK_EXPLORER` | Block explorer URL | `https://amoy.polygonscan.com` |
 | `SCARCOIN_CONTRACT` | ScarCoin contract address | `0x...` |
 | `SCARWALLET_CONTRACT` | ScarWallet contract address | `0x...` |
 
